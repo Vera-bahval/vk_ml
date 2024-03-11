@@ -1,2 +1,37 @@
-print(2+2)
-#this is my first ever repository
+import pandas as pd
+import numpy as np
+import xgboost as xgb
+from sklearn.metrics import ndcg_score
+
+train = pd.read_csv(r"/content/gdrive/My Drive/vk_ml/train_df.csv",dtype = np.float32)
+test = pd.read_csv(r"/content/gdrive/My Drive/vk_ml/test_df.csv",dtype = np.float32)
+
+qid = train.search_id.values
+train = train.drop("search_id", axis = 1)
+X_train = train.loc[:,train.columns != "target"].values
+Y_train = train.target.values
+
+test = test.drop("search_id", axis = 1)
+X_test = test.loc[:,train.columns != "target"].values
+Y_test = test.target.values
+
+lmart_x = xgb.sklearn.XGBRanker(objective='rank:ndcg',
+      learning_rate=0.1,
+      gamma=1.0,
+      min_child_weight=0.1,
+      max_depth=6,
+      verbose=2,
+      random_state=42)
+
+sorted_idx = np.argsort(qid)
+X_train = X_train[sorted_idx, :]
+Y_train = Y_train[sorted_idx]
+qid = qid[sorted_idx]
+lmart_x.fit(X_train, Y_train, qid = qid)
+
+Y_pred = lmart_x.predict(X_test)
+
+Y_test = [Y_test]
+Y_pred = [Y_pred]
+print(ndcg_score(np.asarray(Y_test), np.asarray(Y_pred)))
+
